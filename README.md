@@ -13,6 +13,11 @@
 
 ---
 
+## 🌐 Despliegue en Vivo
+- **URL en Producción (Vercel):** [https://lab5-paradigmas-inky.vercel.app/](https://lab5-paradigmas-inky.vercel.app/)
+
+---
+
 ## 🚀 Criterios de Aceptación Implementados (US-01)
 
 - [x] **Configuración de Auth0:** Aplicación creada en Auth0 con proveedor de identidad social (Google).
