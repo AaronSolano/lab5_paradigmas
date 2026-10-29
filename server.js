@@ -16,12 +16,24 @@ if (issuer && !issuer.startsWith('http://') && !issuer.startsWith('https://')) {
   issuer = 'https://' + issuer;
 }
 
+// Determinar la URL base: si está en Vercel, usar automáticamente el dominio de Vercel
+var baseURL = process.env.AUTH0_BASE_URL;
+if (process.env.VERCEL) {
+  if (!baseURL || baseURL.indexOf('localhost') !== -1) {
+    baseURL = 'https://lab5-paradigmas-inky.vercel.app';
+  }
+}
+if (!baseURL) {
+  baseURL = 'http://localhost:' + port;
+}
+baseURL = baseURL.replace(/\/+$/, '');
+
 // Configuración de Auth0 (Regular Web Application)
 var authConfig = {
   authRequired: false,
   auth0Logout: true,
   secret: process.env.AUTH0_SECRET,
-  baseURL: process.env.AUTH0_BASE_URL || ('http://localhost:' + port),
+  baseURL: baseURL,
   clientID: process.env.AUTH0_CLIENT_ID,
   issuerBaseURL: issuer,
   clientSecret: process.env.AUTH0_CLIENT_SECRET,
