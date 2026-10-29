@@ -1,74 +1,347 @@
 <!doctype html>
-<html>
-  <head>
-    <title>Chat Socket.IO UNA</title>
-    <style>
-      * { margin: 0; padding: 0; box-sizing: border-box; }
-      body { font: 13px Helvetica, Arial; }
-      form { background: #000; padding: 3px; position: fixed; bottom: 0; width: 100%; }
-      form input { border: 0; padding: 10px;}
-      form button { width: 10%; background: rgb(130, 224, 255);  border: none; padding: 10px; }
-      #messages { list-style-type: none; margin: 0; padding: 0; }
-      #messages li { padding: 5px 10px; }
-      #messages li:nth-child(odd) { background: #eee; }
-      #messages { margin-bottom: 40px }
-      #nombre, #m { display: inline-block;}
-      #m {width: 69%; margin-right: 4px;}
-      #nombre {width: 20%}
-    </style>
-  </head>
-  <body>
-    <ul id="messages"></ul>
-    <form action="">
-      <input id="nombre" autocomplete="off" placeholder="Username"/>
-      <input id="m" autocomplete="off" placeholder="Escriba un mensaje" /><button>Send</button>
-    </form>
-    <script src="https://cdn.socket.io/4.7.2/socket.io.js"></script>
-    <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
-    <script>
+<html lang="es">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>UNA Chat - Sala en Vivo</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body {
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
+      background: #0f172a;
+      color: #f1f5f9;
+      height: 100vh;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
 
+    /* Barra Superior de Usuario (Criterio 5) */
+    header {
+      background: #1e293b;
+      border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 12px 24px;
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.2);
+      z-index: 10;
+    }
+
+    .brand {
+      display: flex;
+      align-items: center;
+      gap: 12px;
+    }
+
+    .brand-logo {
+      background: #dc2626;
+      color: white;
+      font-weight: 700;
+      font-size: 15px;
+      padding: 6px 12px;
+      border-radius: 8px;
+      letter-spacing: 0.5px;
+    }
+
+    .brand-title {
+      font-size: 18px;
+      font-weight: 700;
+      color: #ffffff;
+    }
+
+    .user-profile {
+      display: flex;
+      align-items: center;
+      gap: 14px;
+    }
+
+    .user-avatar {
+      width: 40px;
+      height: 40px;
+      border-radius: 50%;
+      border: 2px solid #38bdf8;
+      object-fit: cover;
+    }
+
+    .user-details {
+      display: flex;
+      flex-direction: column;
+      text-align: right;
+    }
+
+    .user-name {
+      font-size: 14px;
+      font-weight: 600;
+      color: #f8fafc;
+    }
+
+    .user-email {
+      font-size: 12px;
+      color: #94a3b8;
+    }
+
+    .btn-logout {
+      background: #334155;
+      color: #f8fafc;
+      font-size: 13px;
+      font-weight: 600;
+      text-decoration: none;
+      padding: 8px 14px;
+      border-radius: 8px;
+      transition: all 0.2s;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+    }
+
+    .btn-logout:hover {
+      background: #dc2626;
+      color: white;
+    }
+
+    /* Contenedor de Mensajes */
+    #chat-container {
+      flex: 1;
+      overflow-y: auto;
+      padding: 20px;
+      display: flex;
+      flex-direction: column;
+    }
+
+    #messages {
+      list-style-type: none;
+      display: flex;
+      flex-direction: column;
+      gap: 12px;
+    }
+
+    #messages li {
+      background: #1e293b;
+      border: 1px solid rgba(255, 255, 255, 0.05);
+      border-radius: 12px;
+      padding: 12px 16px;
+      max-width: 80%;
+      word-wrap: break-word;
+      animation: fadeIn 0.2s ease-out;
+      box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    }
+
+    #messages li.own-message {
+      align-self: flex-end;
+      background: #1e3a8a;
+      border-color: rgba(59, 130, 246, 0.3);
+    }
+
+    .msg-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-bottom: 4px;
+      font-size: 13px;
+    }
+
+    .msg-author {
+      font-weight: 700;
+    }
+
+    .msg-content {
+      font-size: 15px;
+      color: #e2e8f0;
+      line-height: 1.4;
+    }
+
+    .msg-content img {
+      max-width: 100%;
+      border-radius: 8px;
+      margin-top: 6px;
+    }
+
+    .msg-content iframe {
+      max-width: 100%;
+      border-radius: 8px;
+      margin-top: 6px;
+    }
+
+    /* Barra Inferior para Escribir */
+    footer {
+      background: #1e293b;
+      border-top: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 14px 20px;
+    }
+
+    form {
+      display: flex;
+      gap: 10px;
+      align-items: center;
+      max-width: 1200px;
+      margin: 0 auto;
+    }
+
+    .sender-badge {
+      background: #0f172a;
+      border: 1px solid rgba(255, 255, 255, 0.1);
+      padding: 10px 14px;
+      border-radius: 10px;
+      font-size: 14px;
+      font-weight: 600;
+      color: #38bdf8;
+      white-space: nowrap;
+      max-width: 180px;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+
+    #m {
+      flex: 1;
+      background: #0f172a;
+      border: 1px solid rgba(255, 255, 255, 0.15);
+      border-radius: 10px;
+      padding: 12px 16px;
+      color: #ffffff;
+      font-size: 15px;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    #m:focus {
+      border-color: #38bdf8;
+    }
+
+    form button {
+      background: #2563eb;
+      color: white;
+      border: none;
+      border-radius: 10px;
+      padding: 12px 24px;
+      font-size: 15px;
+      font-weight: 600;
+      cursor: pointer;
+      transition: background 0.2s;
+    }
+
+    form button:hover {
+      background: #1d4ed8;
+    }
+
+    @keyframes fadeIn {
+      from { opacity: 0; transform: translateY(4px); }
+      to { opacity: 1; transform: translateY(0); }
+    }
+  </style>
+</head>
+<body>
+  <!-- Encabezado con datos del usuario autenticado (Criterio 5) -->
+  <header>
+    <div class="brand">
+      <div class="brand-logo">UNA</div>
+      <div class="brand-title">UNA Chat</div>
+    </div>
+    <div class="user-profile">
+      <div class="user-details">
+        <span class="user-name" id="user-name">Cargando...</span>
+        <span class="user-email" id="user-email">...</span>
+      </div>
+      <img src="https://via.placeholder.com/40" alt="Avatar" class="user-avatar" id="user-avatar">
+      <a href="/logout" class="btn-logout" title="Cerrar sesión">Cerrar sesión</a>
+    </div>
+  </header>
+
+  <!-- Contenedor del chat -->
+  <div id="chat-container">
+    <ul id="messages"></ul>
+  </div>
+
+  <!-- Barra de entrada de texto -->
+  <footer>
+    <form id="chat-form" action="">
+      <div class="sender-badge" id="sender-display">Usuario</div>
+      <input id="m" autocomplete="off" placeholder="Escribe un mensaje aquí..." required />
+      <button type="submit">Enviar</button>
+    </form>
+  </footer>
+
+  <!-- Scripts -->
+  <script src="https://cdn.socket.io/4.7.2/socket.io.js"></script>
+  <script src="https://code.jquery.com/jquery-1.11.1.js"></script>
+  <script>
+    var currentUser = { name: "Usuario", email: "", picture: "" };
     var colorHexTxt = "";
 
-    // genera colores aleatorios en hexadeximal
     function getRandomColor() {
-        var letters = '0123456789ABCDEF';
-        var color = '#';
-        for (var i = 0; i < 6; i++) {
-          color += letters[Math.floor(Math.random() * 16)];
-        }
+      var letters = '0123456789ABCDEF';
+      var color = '#';
+      for (var i = 0; i < 6; i++) {
+        color += letters[Math.floor(Math.random() * 16)];
+      }
+      return color;
+    }
 
-        return color;
-     }
+    $(function () {
+      colorHexTxt = getRandomColor();
 
-      $(function () {
-        var socket = io();
-
-        // emite evento al servidor
-        
-        $('form').submit(function(){
-            var nombreTxt = $('#nombre').val() || "Anomimo";
-            var mensajeTxt = $('#m').val();
-
-            if (colorHexTxt == "") {
-                colorHexTxt = getRandomColor();
+      // Cargar identidad del usuario autenticado (Criterio 5 y 6)
+      $.getJSON('/api/user')
+        .done(function (data) {
+          if (data.authenticated && data.user) {
+            currentUser = data.user;
+            $('#user-name').text(currentUser.name);
+            $('#user-email').text(currentUser.email || '');
+            if (currentUser.picture) {
+              $('#user-avatar').attr('src', currentUser.picture);
             }
-
-            var jsonMsg = { nombre: nombreTxt, mensaje: mensajeTxt, color: colorHexTxt };
-            socket.emit('Evento-Mensaje-Server', JSON.stringify(jsonMsg));
-            $('#m').val('');
-            return false;
+            $('#sender-display').text(currentUser.name);
+          } else {
+            window.location.href = '/login';
+          }
+        })
+        .fail(function () {
+          window.location.href = '/login';
         });
 
-        // ... (resto del código) ...
+      // Conexión Socket.IO
+      var socket = io();
 
-        socket.on('Evento-Mensaje-Server', function(msg){
-            var msgJson = JSON.parse(msg);
-            var mensajeDisplay = "<b style='color:"+ msgJson.color +"'>" + msgJson.nombre + "</b>: " + msgJson.mensaje;
-            $('#messages').append($('<li>').html(mensajeDisplay));
-            window.scrollTo(0, document.body.scrollHeight);
-        });
+      // Envío de mensaje
+      $('#chat-form').submit(function (e) {
+        e.preventDefault();
+        var mensajeTxt = $('#m').val().trim();
+        if (!mensajeTxt) return false;
 
+        var jsonMsg = {
+          nombre: currentUser.name,
+          mensaje: mensajeTxt,
+          color: colorHexTxt,
+          avatar: currentUser.picture
+        };
+
+        socket.emit('Evento-Mensaje-Server', JSON.stringify(jsonMsg));
+        $('#m').val('');
+        return false;
       });
-    </script>
-  </body>
+
+      // Recepción de mensaje del servidor
+      socket.on('Evento-Mensaje-Server', function (msg) {
+        try {
+          var msgJson = typeof msg === 'string' ? JSON.parse(msg) : msg;
+          var isMe = msgJson.nombre === currentUser.name;
+          var liClass = isMe ? 'own-message' : '';
+
+          var itemHtml = '<li class="' + liClass + '">' +
+            '<div class="msg-header">' +
+              '<b class="msg-author" style="color:' + (msgJson.color || '#38bdf8') + '">' +
+                (msgJson.nombre || 'Anónimo') +
+              '</b>' +
+            '</div>' +
+            '<div class="msg-content">' + msgJson.mensaje + '</div>' +
+          '</li>';
+
+          $('#messages').append(itemHtml);
+          var container = document.getElementById('chat-container');
+          container.scrollTop = container.scrollHeight;
+        } catch (err) {
+          console.error('Error al renderizar mensaje:', err);
+        }
+      });
+    });
+  </script>
+</body>
 </html>
